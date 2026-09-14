@@ -308,7 +308,7 @@ function StepActor({ onNext, onBack }: { onNext: () => void; onBack: () => void 
   const [displayName, setDisplayName] = useState("");
   const [handle, setHandle] = useState("");
   const [gender, setGender] = useState("Female");
-  const [ageRange, setAgeRange] = useState(AGE_RANGES[1]);
+  const [ageRange, setAgeRange] = useState<string>(AGE_RANGES[1]!);
   const [language, setLanguage] = useState("Hindi");
   const [vibe, setVibe] = useState("");
   const [description, setDescription] = useState("");
@@ -318,11 +318,14 @@ function StepActor({ onNext, onBack }: { onNext: () => void; onBack: () => void 
   const nameMissing = displayName.trim().length === 0;
 
   const ageConflict = useMemo(() => {
-    const [lo, hi] = ageRange.split(" to ").map(Number);
+    const parts = ageRange.split(" to ").map(Number);
+    const lo = parts[0] ?? 0;
+    const hi = parts[1] ?? 200;
     const ages = Array.from(description.matchAll(/\b(1[6-9]|[2-6]\d)\b/g)).map((m) => Number(m[1]));
     const off = ages.find((a) => a < lo || a > hi);
     return off ? { age: off, lo, hi } : null;
   }, [ageRange, description]);
+
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
