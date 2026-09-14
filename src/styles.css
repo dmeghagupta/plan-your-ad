@@ -31,7 +31,9 @@
   --color-navy: var(--navy);
   --color-navy-foreground: var(--navy-foreground);
   --color-surface: var(--surface);
+  --color-success: var(--success);
   --color-rule: var(--rule);
+
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
