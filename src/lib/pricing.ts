@@ -82,10 +82,11 @@ export function scenarioTotal(scenario: Scenario) {
 
 /** Cheapest plan that covers the given per-ad cost, plus ads per month. */
 export function planCoverage(totalCredits: number) {
-  const plan = PLANS.find((p) => p.monthlyCredits >= totalCredits) ?? PLANS[PLANS.length - 1];
+  const plan = PLANS.find((p) => p.monthlyCredits >= totalCredits) ?? PLANS[PLANS.length - 1]!;
   const ads = Math.floor(plan.monthlyCredits / Math.max(totalCredits, 1));
   return { plan: plan.name, ads };
 }
+
 
 export function keyframesFor(credits: number) {
   return Math.floor(credits / KEYFRAME_CREDITS);
