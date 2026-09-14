@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { EXAMPLE_BRIEF, EXAMPLE_SHOTS, type Shot } from "@/data/example-plan";
+import { EXAMPLE_ACTOR, EXAMPLE_BRIEF, EXAMPLE_SHOTS, type Shot } from "@/data/example-plan";
 import { buildShotPlan } from "@/lib/plan.functions";
 import {
   FREE_CREDITS_DEFAULT,
@@ -304,6 +304,16 @@ function StepShots({
 const HANDLE_RE = /^[a-z0-9_-]{2,32}$/;
 const AGE_RANGES = ["18 to 24", "25 to 34", "35 to 44", "45 to 60"];
 
+function handleError(handle: string): string | null {
+  if (handle.length === 0) return "Enter a handle.";
+  if (/\s/.test(handle)) return "Handles cannot contain spaces.";
+  if (/[A-Z]/.test(handle)) return "Handles must be lowercase.";
+  if (/[^a-z0-9_-]/.test(handle)) return "Handles can only use lowercase letters, numbers, dash or underscore.";
+  if (handle.length < 2) return "Handles must be at least 2 characters.";
+  if (handle.length > 32) return "Handles must be 32 characters or fewer.";
+  return null;
+}
+
 function StepActor({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [displayName, setDisplayName] = useState("");
   const [handle, setHandle] = useState("");
@@ -312,10 +322,10 @@ function StepActor({ onNext, onBack }: { onNext: () => void; onBack: () => void 
   const [language, setLanguage] = useState("Hindi");
   const [vibe, setVibe] = useState("");
   const [description, setDescription] = useState("");
-  const [submitted, setSubmitted] = useState(false);
 
-  const handleValid = HANDLE_RE.test(handle);
+  // Validation runs as the user types, not on submit.
   const nameMissing = displayName.trim().length === 0;
+  const handleErr = handleError(handle);
 
   const ageConflict = useMemo(() => {
     const parts = ageRange.split(" to ").map(Number);
@@ -326,11 +336,22 @@ function StepActor({ onNext, onBack }: { onNext: () => void; onBack: () => void 
     return off ? { age: off, lo, hi } : null;
   }, [ageRange, description]);
 
+  const missing = [nameMissing ? "display name" : null, handleErr ? "handle" : null].filter(Boolean) as string[];
+  const canSubmit = missing.length === 0;
+
+  function fillExample() {
+    setDisplayName(EXAMPLE_ACTOR.displayName);
+    setHandle(EXAMPLE_ACTOR.handle);
+    setGender(EXAMPLE_ACTOR.gender);
+    setAgeRange(EXAMPLE_ACTOR.ageRange);
+    setLanguage(EXAMPLE_ACTOR.language);
+    setVibe(EXAMPLE_ACTOR.vibe);
+    setDescription(EXAMPLE_ACTOR.description);
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitted(true);
-    if (nameMissing || !handleValid) return;
+    if (!canSubmit) return;
     onNext();
   }
 
@@ -340,47 +361,49 @@ function StepActor({ onNext, onBack }: { onNext: () => void; onBack: () => void 
       <p className="mt-2 text-sm text-muted-foreground">
         One recurring character keeps every shot consistent and stops wasted regenerations.
       </p>
+      <button type="button" onClick={fillExample} className="mt-3 text-sm text-navy underline underline-offset-4">
+        Fill the example actor
+      </button>
 
       <form onSubmit={submit} noValidate className="mt-6 grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="displayName" className="text-sm font-medium">
             Display name <span className="text-destructive">*</span>
           </label>
-          <p className="text-xs text-muted-foreground">Required</p>
+          <p className="text-xs text-muted-foreground">The name shown in your actor library.</p>
           <input
             id="displayName"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            aria-invalid={submitted && nameMissing}
+            aria-invalid={nameMissing}
             className="field mt-1"
           />
-          {submitted && nameMissing && (
+          {nameMissing && (
             <p role="alert" className="mt-1 text-sm text-destructive">
-              Enter a display name for your actor.
+              Enter a display name.
             </p>
           )}
         </div>
 
         <div>
           <label htmlFor="handle" className="text-sm font-medium">
-            Handle
+            Handle <span className="text-destructive">*</span>
           </label>
           <p className="text-xs text-muted-foreground">2 to 32 characters, lowercase letters, numbers, dash or underscore</p>
           <input
             id="handle"
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
-            aria-invalid={handle.length > 0 && !handleValid}
+            aria-invalid={Boolean(handleErr)}
             className="field mt-1"
           />
-          {handle.length > 0 &&
-            (handleValid ? (
-              <p className="mt-1 text-sm text-success">&#10003; Handle looks good</p>
-            ) : (
-              <p role="alert" className="mt-1 text-sm text-destructive">
-                Use 2 to 32 characters: lowercase letters, numbers, dash or underscore only.
-              </p>
-            ))}
+          {handleErr ? (
+            <p role="alert" className="mt-1 text-sm text-destructive">
+              {handleErr}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-success">&#10003; Handle looks good</p>
+          )}
         </div>
 
         <div>
@@ -404,7 +427,7 @@ function StepActor({ onNext, onBack }: { onNext: () => void; onBack: () => void 
             ))}
           </select>
           {ageConflict && (
-            <p role="alert" className="mt-1 text-sm text-destructive">
+            <p role="alert" className="mt-1 text-sm text-warning">
               Age range says {ageConflict.lo} to {ageConflict.hi}, but the description mentions {ageConflict.age}.
             </p>
           )}
@@ -443,20 +466,29 @@ function StepActor({ onNext, onBack }: { onNext: () => void; onBack: () => void 
             className="field mt-1"
           />
           {ageConflict && (
-            <p role="alert" className="mt-1 text-sm text-destructive">
+            <p role="alert" className="mt-1 text-sm text-warning">
               The description mentions {ageConflict.age}, which sits outside the age range {ageConflict.lo} to{" "}
               {ageConflict.hi}.
             </p>
           )}
         </div>
 
-        <div className="flex flex-wrap gap-3 sm:col-span-2">
-          <button type="submit" className="bg-navy px-5 py-2.5 text-sm font-medium text-navy-foreground hover:opacity-90">
-            Next: credits and cost
-          </button>
-          <button type="button" onClick={onBack} className="border border-rule px-5 py-2.5 text-sm font-medium">
-            Back
-          </button>
+        <div className="sm:col-span-2">
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="bg-navy px-5 py-2.5 text-sm font-medium text-navy-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              Build actor
+            </button>
+            <button type="button" onClick={onBack} className="border border-rule px-5 py-2.5 text-sm font-medium">
+              Back
+            </button>
+          </div>
+          {!canSubmit && (
+            <p className="mt-2 text-sm text-muted-foreground">Still needed: {missing.join(", ")}.</p>
+          )}
         </div>
       </form>
     </section>
